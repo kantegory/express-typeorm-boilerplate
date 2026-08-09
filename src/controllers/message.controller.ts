@@ -1,105 +1,42 @@
 import { Request, Response } from 'express';
-import { UserService } from '../services/user.service';
-import { CreateUserDto, UpdateUserDto } from '../dto/user.dto';
+import { MessageService } from '../services/message.service';
+import { CreateMessageDto, UpdateMessageDto } from '../dto/message.dto';
 import { validate } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
 
-export class UserController {
-    private userService: UserService;
+export class MessageController {
+    private messageService: MessageService;
 
     constructor() {
-        this.userService = new UserService();
+        this.messageService = new MessageService();
     }
 
     /**
      * @swagger
-     * /users:
+     * /messages:
      *   get:
-     *     summary: Get all users
-     *     tags: [Users]
+     *     summary: Get all messages (with optional filters)
+     *     tags: [Messages]
+     *     parameters:
+     *       - in: query
+     *         name: session_id
+     *         schema:
+     *           type: integer
+     *         description: Filter by session ID
+     *       - in: query
+     *         name: user_id
+     *         schema:
+     *           type: integer
+     *         description: Filter by user ID
      *     responses:
      *       200:
-     *         description: List of users
+     *         description: List of messages
      *         content:
      *           application/json:
      *             schema:
      *               type: array
      *               items:
-     *                 $ref: '#/components/schemas/User'
-     */
-    listUsers = async (req: Request, res: Response): Promise<void> => {
-        try {
-            const users = await this.userService.findAll();
-            res.json(users);
-        } catch (error) {
-            res.status(500).json({ error: 'Internal server error' });
-        }
-    };
-
-    /**
-     * @swagger
-     * /users/{userId}:
-     *   get:
-     *     summary: Get user by ID
-     *     tags: [Users]
-     *     parameters:
-     *       - in: path
-     *         name: userId
-     *         required: true
-     *         schema:
-     *           type: integer
-     *     responses:
-     *       200:
-     *         description: User found
-     *         content:
-     *           application/json:
-     *             schema:
-     *               $ref: '#/components/schemas/User'
-     *       404:
-     *         description: User not found
-     *         content:
-     *           application/json:
-     *             schema:
-     *               $ref: '#/components/schemas/Error'
-     */
-    getUser = async (req: Request, res: Response): Promise<void> => {
-        try {
-            const userId = parseInt(req.params.userId);
-            const user = await this.userService.findById(userId);
-
-            if (!user) {
-                res.status(404).json({
-                    statusCode: 404,
-                    error: { code: 'NOT_FOUND', message: 'User not found' }
-                });
-                return;
-            }
-
-            res.json(user);
-        } catch (error) {
-            res.status(500).json({ error: 'Internal server error' });
-        }
-    };
-
-    /**
-     * @swagger
-     * /users:
-     *   post:
-     *     summary: Create a new user
-     *     tags: [Users]
-     *     requestBody:
-     *       required: true
-     *       content:
-     *         application/json:
-     *           schema:
-     *             $ref: '#/components/schemas/CreateUserRequest'
-     *     responses:
-     *       201:
-     *         description: User created
-     *         content:
-     *           application/json:
-     *             schema:
-     *               $ref: '#/components/schemas/User'
+     *                 $ref: '#/components/schemas/Message'
      *       422:
      *         description: Validation error
      *         content:
@@ -107,9 +44,98 @@ export class UserController {
      *             schema:
      *               $ref: '#/components/schemas/Error'
      */
-    createUser = async (req: Request, res: Response): Promise<void> => {
+    listMessages = async (req: Request, res: Response): Promise<void> => {
         try {
-            const dto = plainToInstance(CreateUserDto, req.body);
+            const session_id = req.query.session_id ? parseInt(req.query.session_id as string) : undefined;
+            const user_id = req.query.user_id ? parseInt(req.query.user_id as string) : undefined;
+
+            const messages = await this.messageService.findAll(session_id, user_id);
+            res.json(messages);
+        } catch (error) {
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    };
+
+    /**
+     * @swagger
+     * /messages/{messageId}:
+     *   get:
+     *     summary: Get message by ID
+     *     tags: [Messages]
+     *     parameters:
+     *       - in: path
+     *         name: messageId
+     *         required: true
+     *         schema:
+     *           type: integer
+     *     responses:
+     *       200:
+     *         description: Message found
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/Message'
+     *       404:
+     *         description: Message not found
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/Error'
+     */
+    getMessage = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const messageId = parseInt(req.params.messageId);
+            const message = await this.messageService.findById(messageId);
+
+            if (!message) {
+                res.status(404).json({
+                    statusCode: 404,
+                    error: { code: 'NOT_FOUND', message: 'Message not found' }
+                });
+                return;
+            }
+
+            res.json(message);
+        } catch (error) {
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    };
+
+    /**
+     * @swagger
+     * /messages:
+     *   post:
+     *     summary: Create a new message
+     *     tags: [Messages]
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             $ref: '#/components/schemas/CreateMessageRequest'
+     *     responses:
+     *       201:
+     *         description: Message created
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/Message'
+     *       422:
+     *         description: Validation error
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/Error'
+     *       404:
+     *         description: User or Session not found
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/Error'
+     */
+    createMessage = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const dto = plainToInstance(CreateMessageDto, req.body);
             const errors = await validate(dto);
 
             if (errors.length > 0) {
@@ -127,32 +153,22 @@ export class UserController {
                 return;
             }
 
-            const user = await this.userService.create(dto);
-            res.status(201).json(user);
-        } catch (error: any) {
-            if (error.code === '23505') {
-                res.status(422).json({
-                    statusCode: 422,
-                    error: {
-                        code: 'VALIDATION_ERROR',
-                        message: 'Email already exists'
-                    }
-                });
-                return;
-            }
+            const message = await this.messageService.create(dto);
+            res.status(201).json(message);
+        } catch (error) {
             res.status(500).json({ error: 'Internal server error' });
         }
     };
 
     /**
      * @swagger
-     * /users/{userId}:
+     * /messages/{messageId}:
      *   patch:
-     *     summary: Update user by ID
-     *     tags: [Users]
+     *     summary: Update message by ID
+     *     tags: [Messages]
      *     parameters:
      *       - in: path
-     *         name: userId
+     *         name: messageId
      *         required: true
      *         schema:
      *           type: integer
@@ -161,16 +177,16 @@ export class UserController {
      *       content:
      *         application/json:
      *           schema:
-     *             $ref: '#/components/schemas/UpdateUserRequest'
+     *             $ref: '#/components/schemas/UpdateMessageRequest'
      *     responses:
      *       200:
-     *         description: User updated
+     *         description: Message updated
      *         content:
      *           application/json:
      *             schema:
-     *               $ref: '#/components/schemas/User'
+     *               $ref: '#/components/schemas/Message'
      *       404:
-     *         description: User not found
+     *         description: Message not found
      *         content:
      *           application/json:
      *             schema:
@@ -182,10 +198,10 @@ export class UserController {
      *             schema:
      *               $ref: '#/components/schemas/Error'
      */
-    updateUser = async (req: Request, res: Response): Promise<void> => {
+    updateMessage = async (req: Request, res: Response): Promise<void> => {
         try {
-            const userId = parseInt(req.params.userId);
-            const dto = plainToInstance(UpdateUserDto, req.body);
+            const messageId = parseInt(req.params.messageId);
+            const dto = plainToInstance(UpdateMessageDto, req.body);
             const errors = await validate(dto, { skipMissingProperties: true });
 
             if (errors.length > 0) {
@@ -203,17 +219,17 @@ export class UserController {
                 return;
             }
 
-            const user = await this.userService.update(userId, dto);
+            const message = await this.messageService.update(messageId, dto);
 
-            if (!user) {
+            if (!message) {
                 res.status(404).json({
                     statusCode: 404,
-                    error: { code: 'NOT_FOUND', message: 'User not found' }
+                    error: { code: 'NOT_FOUND', message: 'Message not found' }
                 });
                 return;
             }
 
-            res.json(user);
+            res.json(message);
         } catch (error) {
             res.status(500).json({ error: 'Internal server error' });
         }
@@ -221,21 +237,21 @@ export class UserController {
 
     /**
      * @swagger
-     * /users/{userId}:
+     * /messages/{messageId}:
      *   delete:
-     *     summary: Delete user by ID
-     *     tags: [Users]
+     *     summary: Delete message by ID
+     *     tags: [Messages]
      *     parameters:
      *       - in: path
-     *         name: userId
+     *         name: messageId
      *         required: true
      *         schema:
      *           type: integer
      *     responses:
      *       204:
-     *         description: User deleted
+     *         description: Message deleted
      *       404:
-     *         description: User not found
+     *         description: Message not found
      *         content:
      *           application/json:
      *             schema:
@@ -247,15 +263,15 @@ export class UserController {
      *             schema:
      *               $ref: '#/components/schemas/Error'
      */
-    deleteUser = async (req: Request, res: Response): Promise<void> => {
+    deleteMessage = async (req: Request, res: Response): Promise<void> => {
         try {
-            const userId = parseInt(req.params.userId);
-            const deleted = await this.userService.delete(userId);
+            const messageId = parseInt(req.params.messageId);
+            const deleted = await this.messageService.delete(messageId);
 
             if (!deleted) {
                 res.status(404).json({
                     statusCode: 404,
-                    error: { code: 'NOT_FOUND', message: 'User not found' }
+                    error: { code: 'NOT_FOUND', message: 'Message not found' }
                 });
                 return;
             }
